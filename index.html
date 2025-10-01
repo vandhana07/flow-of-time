@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fragmented Time</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Arial', sans-serif;
+    background: #0f0f2e;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #gameArea {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .clockPiece {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: #1a1a3d;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s;
+    user-select: none;
+    border: 2px solid #4cd9b2;
+  }
+  .matched {
+    background: #4cd9b2;
+    border-color: #2b7a6b;
+  }
+  #startScreen, #endScreen {
+    position: absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background: rgba(15,15,46,0.95);
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-size: 2em;
+    padding: 20px;
+    z-index: 10;
+  }
+  #startScreen button, #endScreen button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 0.5em;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    background: #4cd9b2;
+    color: #0f0f2e;
+    transition: transform 0.2s;
+  }
+  #startScreen button:hover, #endScreen button:hover {
+    transform: scale(1.1);
+  }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <div>Time feels broken… can you piece it together?</div>
+  <button onclick="startGame()">Start</button>
+</div>
+
+<div id="gameArea"></div>
+
+<div id="endScreen" style="display:none;">
+  <div>Unfiltered. Let’s heal for real. You restored the flow of time — and your mind.</div>
+  <button onclick="restartGame()">Play Again</button>
+</div>
+
+<script>
+const gameArea = document.getElementById('gameArea');
+const startScreen = document.getElementById('startScreen');
+const endScreen = document.getElementById('endScreen');
+
+let pieces = [];
+let selectedPiece = null;
+let matchedCount = 0;
+
+// Settings
+const NUM_PAIRS = 6; // total number of real pairs
+const DECOR_COUNT = 4; // number of decoy pieces
+
+function startGame() {
+  startScreen.style.display = 'none';
+  matchedCount = 0;
+  pieces = [];
+  gameArea.innerHTML = '';
+
+  const symbols = [];
+  for(let i=1; i<=NUM_PAIRS; i++) symbols.push(i);
+
+  const allPieces = [...symbols, ...symbols]; // pairs
+  shuffleArray(allPieces);
+
+  // Add decoys
+  for(let i=0;i<DECOR_COUNT;i++) allPieces.push('❓');
+
+  allPieces.forEach((sym, idx) => {
+    const piece = document.createElement('div');
+    piece.classList.add('clockPiece');
+    piece.innerText = sym;
+    piece.dataset.value = sym;
+    piece.style.top = Math.random() * (window.innerHeight - 80) + 'px';
+    piece.style.left = Math.random() * (window.innerWidth - 80) + 'px';
+    gameArea.appendChild(piece);
+    pieces.push(piece);
+
+    piece.addEventListener('click', () => handleClick(piece));
+  });
+
+  movePieces();
+}
+
+function handleClick(piece) {
+  if(piece.classList.contains('matched')) return;
+
+  // ignore decoys
+  if(piece.dataset.value === '❓') {
+    piece.style.transform = 'scale(1.2)';
+    setTimeout(() => piece.style.transform='scale(1)', 200);
+    return;
+  }
+
+  if(!selectedPiece) {
+    selectedPiece = piece;
+    piece.style.transform = 'scale(1.2)';
+  } else {
+    if(selectedPiece === piece) return;
+
+    if(selectedPiece.dataset.value === piece.dataset.value) {
+      selectedPiece.classList.add('matched');
+      piece.classList.add('matched');
+      matchedCount++;
+      selectedPiece.style.transform = 'scale(1)';
+      piece.style.transform = 'scale(1)';
+      selectedPiece = null;
+
+      if(matchedCount === NUM_PAIRS) {
+        endGame();
+      }
+    } else {
+      selectedPiece.style.transform = 'scale(1)';
+      piece.style.transform = 'scale(1.2)';
+      setTimeout(() => piece.style.transform='scale(1)', 300);
+      selectedPiece = null;
+    }
+  }
+}
+
+function movePieces() {
+  pieces.forEach(piece => {
+    if(piece.classList.contains('matched')) return;
+
+    let top = parseFloat(piece.style.top);
+    let left = parseFloat(piece.style.left);
+
+    const speed = Math.random() * 2 + 0.5; // random speed
+    const dirX = Math.random() > 0.5 ? 1 : -1;
+    const dirY = Math.random() > 0.5 ? 1 : -1;
+
+    piece.style.top = Math.min(Math.max(top + dirY * speed, 0), window.innerHeight - 60) + 'px';
+    piece.style.left = Math.min(Math.max(left + dirX * speed, 0), window.innerWidth - 60) + 'px';
+
+    // random teleport
+    if(Math.random() < 0.005) {
+      piece.style.top = Math.random() * (window.innerHeight - 80) + 'px';
+      piece.style.left = Math.random() * (window.innerWidth - 80) + 'px';
+    }
+
+    // decoy vanish and reappear
+    if(piece.dataset.value === '❓' && Math.random() < 0.01) {
+      piece.style.display = piece.style.display === 'none' ? 'flex' : 'none';
+    }
+  });
+
+  requestAnimationFrame(movePieces);
+}
+
+function endGame() {
+  endScreen.style.display = 'flex';
+}
+
+function restartGame() {
+  endScreen.style.display = 'none';
+  startScreen.style.display = 'flex';
+}
+
+// utility
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+</script>
+
+</body>
+</html>
+    
+  </body>
+  
+</html>
